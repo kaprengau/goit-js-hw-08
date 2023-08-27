@@ -1,43 +1,46 @@
-const formEl = document.querySelector('.feedback-form');
+import throttle from 'lodash.throttle';
 
-const email = document.querySelector('input[name="email"]'); // посилання на input (поле введення Email)
-const message = document.querySelector('textarea[name="message"]'); // посилання на textarea (поле введення Message)
-const LOCALSTORAGE_KEY = 'feedback-form-state'; // змінна, яка сберігає назву ключа у локальному сховищі
-const inputFormData = { email: '', message: '' };
-const userData = {};
-
-const fillFormInputes = () => {
-  const dataLocal = JSON.parse(localStorage.getItem('.feedback-form-state'));
-  if (dataLocal === null) {
-    return;
-  }
-  for (const prop in dataLocal) {
-    formEl.elements[prop].value = dataLocal[prop];
-  }
+const refs = {
+  formElem: document.querySelector('.feedback-form'),
 };
 
-const onFormSubmit = event => {
+refs.formElem.addEventListener('input', throttle(onFormInput, 500));
+
+let obj = {};
+
+function onFormInput(ev) {
+  const value = ev.target.value;
+  const key = ev.target.name;
+  obj[key] = value;
+  localStorage.setItem('feedback-form-state', JSON.stringify(obj));
+}
+
+function onLoadPage() {
+  const data = localStorage.getItem('feedback-form-state');
+  const parseData = JSON.parse(data) || {};
+  obj = parseData;
+  refs.formElem.elements.email.value = parseData?.email || '';
+  refs.formElem.elements.message.value = parseData?.message || '';
+}
+onLoadPage();
+
+document.querySelector('form').addEventListener('submit', onFormSubmit);
+
+function onFormSubmit(event) {
   event.preventDefault();
-  if (email.value.trim() === '' || message.value.trim() === '') {
-    console.log('Please fill in all required fields.');
-    return;
+
+  const email = document.querySelector('input[name="email"]').value;
+  const message = document.querySelector('textarea[name="message"]').value;
+
+  if (email === '' || message === '') {
+    window.alert('The field is empty!');
+  } else {
+    console.log({ email: email, message: message });
+    obj = {};
+    event.target.reset();
+    localStorage.removeItem('feedback-form-state');
+
+    document.querySelector('input[name="email"]').value = '';
+    document.querySelector('textarea[name="message"]').value = '';
   }
-  localStorage.removeItem(LOCALSTORAGE_KEY);
-  email.value = '';
-  message.value = '';
-  console.dir('event.turget = ', event.turget);
-};
-formEl.addEventListener('submit', onFormSubmit);
-
-fillFormInputes();
-
-const onFormInput = ({ target }) => {
-  const userKey = target.name;
-  const userValue = target.value;
-  userData[userKey] = userValue;
-  const dataLocal = JSON.parse(localStorage.getItem('feedback-form-state'));
-  localStorage.setItem(
-    'feedback-form-state',
-    JSON.stringify({ ...dataLocal, ...userData })
-  );
-};
+}
